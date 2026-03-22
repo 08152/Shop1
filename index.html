@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Mini Shop Login</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body { margin:0; font-family: Arial, sans-serif; background:#f0f2f5; display:flex; justify-content:center; align-items:center; height:100vh; }
+.login-box { background:white; padding:30px; border-radius:15px; box-shadow:0 5px 15px rgba(0,0,0,0.2); width:300px; text-align:center; }
+input { width:100%; padding:10px; margin:10px 0; border-radius:8px; border:1px solid #ccc; font-size:14px; }
+button { width:100%; padding:10px; margin-top:10px; border:none; border-radius:8px; background:#0064d2; color:white; font-size:16px; cursor:pointer; }
+button:hover { background:#004a9f; }
+h2 { margin-bottom:20px; }
+</style>
+</head>
+<body>
+
+<div class="login-box">
+    <h2>Willkommen!</h2>
+    <input type="email" id="email" placeholder="E-Mail">
+    <input type="text" id="username" placeholder="Benutzername">
+    <input type="password" id="pin" placeholder="PIN">
+    <button onclick="login()">Einloggen</button>
+</div>
+
+<script>
+// Prüfen, ob bereits User gespeichert ist
+window.onload = function(){
+    const savedEmail = localStorage.getItem("userEmail");
+    const savedUsername = localStorage.getItem("userName");
+    const savedPin = localStorage.getItem("userPin");
+
+    if(savedEmail) document.getElementById("email").value = savedEmail;
+    if(savedUsername) document.getElementById("username").value = savedUsername;
+    if(savedPin) document.getElementById("pin").value = savedPin;
+};
+
+function login() {
+    const email = document.getElementById("email").value.trim();
+    const username = document.getElementById("username").value.trim();
+    const pin = document.getElementById("pin").value.trim();
+
+    if(!email || !username || !pin){
+        alert("Bitte alles ausfüllen!");
+        return;
+    }
+
+    // Speichern der User-Daten lokal
+    localStorage.setItem("userEmail", email);
+    localStorage.setItem("userName", username);
+    localStorage.setItem("userPin", pin);
+
+    // Weiterleiten auf 2.html
+    window.location.href = "2.html";
+}
+</script>
+
+</body>
+</html>

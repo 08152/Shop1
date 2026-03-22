@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Mini Shop - Likes pro User</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body { margin:0; font-family:Arial,sans-serif; background:#f5f7fa; }
+header { background:#0064d2; color:white; padding:20px; font-size:28px; text-align:center; }
+#currentUser { font-weight:bold; }
+.products { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:20px; padding:20px; }
+.product { background:white; border-radius:15px; box-shadow:0 5px 15px rgba(0,0,0,0.1); position:relative; overflow:hidden; transition:0.3s; cursor:pointer; }
+.product:hover { transform:translateY(-5px); box-shadow:0 10px 25px rgba(0,0,0,0.2); }
+.product img { width:100%; height:180px; object-fit:cover; }
+.product-content { padding:15px; }
+.product h3 { margin:0; font-size:18px; }
+.product p { color:#555; font-size:14px; }
+.price { color:#00aa55; font-size:20px; font-weight:bold; margin:10px 0; }
+.like-btn { position:absolute; top:10px; left:10px; background:#ff5050; border:none; border-radius:50%; width:35px; height:35px; font-size:18px; color:white; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.like-btn span { margin-left:5px; font-size:14px; color:white; }
+.edit-btn { position:absolute; top:10px; right:10px; background:#0064d2; border:none; border-radius:50%; width:35px; height:35px; font-size:18px; color:white; cursor:pointer; }
+footer { text-align:center; padding:15px; color:#777; font-size:14px; }
+.add-btn { position:fixed; right:20px; bottom:20px; background:#00aa55; border:none; border-radius:50%; width:50px; height:50px; font-size:30px; color:white; cursor:pointer; }
+.add-menu { position:fixed; right:20px; bottom:80px; background:white; padding:15px; border-radius:15px; box-shadow:0 5px 15px rgba(0,0,0,0.2); display:none; width:250px; }
+.add-menu input, .add-menu textarea { width:100%; padding:8px; margin:5px 0; border-radius:8px; border:1px solid #ccc; font-size:14px; }
+.add-menu button { width:100%; padding:10px; border:none; border-radius:8px; background:#0064d2; color:white; cursor:pointer; margin-top:5px; }
+.add-menu button:hover { background:#004a9f; }
+
+/* Popup für Produktdetails */
+#productPopup { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; }
+#productPopup .popup-content { background:white; padding:20px; border-radius:15px; width:300px; max-width:90%; text-align:left; position:relative; }
+#productPopup .close { position:absolute; top:10px; right:15px; font-size:20px; cursor:pointer; }
+#productPopup h3 { margin-top:0; }
+#productPopup p { margin:5px 0; }
+</style>
+</head>
+<body>
+
+<header>
+Mini Shop – Hallo <span id="currentUser"></span>
+</header>
+
+<div class="products" id="productList"></div>
+
+<button class="add-btn" onclick="toggleMenu()">+</button>
+
+<div class="add-menu" id="addMenu">
+    <h4>Neues Produkt</h4>
+    <input type="text" id="prodName" placeholder="Produktname">
+    <input type="text" id="prodPrice" placeholder="Preis z.B. 29,99€">
+    <textarea id="prodDesc" placeholder="Beschreibung"></textarea>
+    <input type="text" id="prodImg" placeholder="Bildlink (URL)">
+    <button onclick="addProduct()">Hinzufügen</button>
+</div>
+
+<!-- Popup -->
+<div id="productPopup">
+    <div class="popup-content">
+        <span class="close" onclick="closePopup()">✖</span>
+        <h3 id="popupName"></h3>
+        <p id="popupDesc"></p>
+        <p id="popupPrice"></p>
+        <p><strong>Verkäufer E-Mail:</strong> <span id="popupEmail"></span></p>
+    </div>
+</div>
+
+<footer>© 2026 Mini Shop</footer>
+
+<script>
+// Aktueller User
+const currentUser = localStorage.getItem("userName") || "Gast";
+const currentEmail = localStorage.getItem("userEmail") || "";
+document.getElementById("currentUser").innerText = currentUser;
+
+// + Menü
+function toggleMenu() {
+    const menu = document.getElementById("addMenu");
+    menu.style.display = (menu.style.display==="block") ? "none" : "block";
+}
+
+// Alle Produkte aus localStorage laden
+let products = JSON.parse(localStorage.getItem("products")) || [];
+
+// Liste von Produkt-IDs, die der aktuelle User geliked hat
+let userLikes = JSON.parse(localStorage.getItem("userLikes_" + currentEmail)) || [];
+
+// Produkte rendern
+function renderProducts() {
+    const list = document.getElementById("productList");
+    list.innerHTML = "";
+    products.forEach((p,i) => {
+        const div = document.createElement("div");
+        div.className="product";
+        // Liked Status für Button
+        const liked = userLikes.includes(i) ? "❤️" : "❤";
+        div.innerHTML = `
+            <img src="${p.img}">
+            <button class="like-btn" onclick="likeProduct(${i},event)">${liked} <span>${p.likes}</span></button>
+            <div class="product-content">
+                <h3>${p.name}</h3>
+                <p>${p.desc}</p>
+                <div class="price">${p.price}</div>
+            </div>
+            ${p.ownerEmail===currentEmail ? '<button class="edit-btn" onclick="editProduct('+i+',event)">✎</button>' : ''}
+        `;
+        div.addEventListener("click", function(e){
+            if(e.target.classList.contains("like-btn") || e.target.tagName==="SPAN" || e.target.classList.contains("edit-btn")) return;
+            openPopup(p);
+        });
+        list.appendChild(div);
+    });
+}
+renderProducts();
+
+// Like-Funktion: nur einmal pro User pro Produkt
+function likeProduct(index,event){
+    event.stopPropagation();
+    if(userLikes.includes(index)) return; // schon geliked
+    products[index].likes++;
+    userLikes.push(index);
+    localStorage.setItem("products", JSON.stringify(products));
+    localStorage.setItem("userLikes_" + currentEmail, JSON.stringify(userLikes));
+    renderProducts();
+}
+
+// Produkt hinzufügen
+function addProduct(){
+    const name = document.getElementById("prodName").value.trim();
+    const price = document.getElementById("prodPrice").value.trim();
+    const desc = document.getElementById("prodDesc").value.trim();
+    const img = document.getElementById("prodImg").value.trim();
+
+    if(!name || !price || !desc || !img){ alert("Bitte alle Felder ausfüllen!"); return; }
+
+    products.unshift({name, price, desc, img, likes:0, ownerEmail: currentEmail});
+    localStorage.setItem("products", JSON.stringify(products));
+    renderProducts();
+
+    document.getElementById("prodName").value="";
+    document.getElementById("prodPrice").value="";
+    document.getElementById("prodDesc").value="";
+    document.getElementById("prodImg").value="";
+    toggleMenu();
+}
+
+// Editieren (nur eigene Produkte)
+function editProduct(index,event){
+    event.stopPropagation();
+    const p = products[index];
+    const newName = prompt("Produktname:", p.name);
+    const newPrice = prompt("Preis:", p.price);
+    const newDesc = prompt("Beschreibung:", p.desc);
+    const newImg = prompt("Bildlink:", p.img);
+    if(newName && newPrice && newDesc && newImg){
+        products[index] = {...p, name:newName, price:newPrice, desc:newDesc, img:newImg};
+        localStorage.setItem("products", JSON.stringify(products));
+        renderProducts();
+    }
+}
+
+// Popup
+function openPopup(product){
+    document.getElementById("popupName").innerText = product.name;
+    document.getElementById("popupDesc").innerText = product.desc;
+    document.getElementById("popupPrice").innerText = product.price;
+    document.getElementById("popupEmail").innerText = product.ownerEmail;
+    document.getElementById("productPopup").style.display = "flex";
+}
+function closePopup(){ document.getElementById("productPopup").style.display = "none"; }
+</script>
+
+</body>
+</html>
